@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getJob } from "@/lib/pipeline";
+import { getJob } from "@/lib/db";
 
 // GET /api/jobs/[jobId]
 export async function GET(
@@ -7,16 +7,8 @@ export async function GET(
   { params }: { params: Promise<{ jobId: string }> }
 ) {
   const { jobId } = await params;
-
-  if (!process.env.DATABASE_URL) {
-    return NextResponse.json(
-      { success: false, error: "DATABASE_URL is not configured" },
-      { status: 503 }
-    );
-  }
-
   try {
-    const job = await getJob(jobId);
+    const job = getJob(jobId);
     if (!job) {
       return NextResponse.json({ success: false, error: "Job not found" }, { status: 404 });
     }
