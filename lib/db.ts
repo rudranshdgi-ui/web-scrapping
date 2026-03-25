@@ -1,14 +1,16 @@
 /**
- * File-based store — replaces PostgreSQL.
- * Data is written to:
- *   - dev:  <project-root>/data/
- *   - prod: /tmp/pdp-scraper/  (Vercel / any serverless host)
+ * File-based store backed by data/jobs.json and data/products.json.
+ * After every write, scheduleCommit() queues a git commit + push to GitHub.
  *
- * Override the directory with the DATA_DIR env var.
+ * Data directory:
+ *   - dev / Railway / VPS: <project-root>/data/
+ *   - Vercel (read-only FS): /tmp/pdp-scraper/   (push still works via git)
+ *   Override with DATA_DIR env var.
  */
 import fs from "fs";
 import path from "path";
 import { Job, SavedProduct } from "@/types";
+import { scheduleCommit } from "./git-store";
 
 const DATA_DIR =
   process.env.DATA_DIR ??
@@ -48,6 +50,10 @@ export function saveJob(job: Job) {
   const jobs = readJobs();
   jobs[job.id] = job;
   writeJson("jobs.json", jobs);
+  // Only push when the job reaches a terminal state (completed / failed)
+  if (job.status === "completed" || job.status === "failed") {
+    scheduleCommit(`scrape(${job.brand}): ${job.sku} → ${job.status}`);
+  }
 }
 
 // ── Products ──────────────────────────────────────────────────────────────────
@@ -62,9 +68,9 @@ export function getProduct(id: string): SavedProduct | null {
 
 export function saveProduct(product: SavedProduct) {
   const products = readProducts();
-  // Deduplicate by id
   const filtered = products.filter((p) => p.id !== product.id);
   writeJson("products.json", [product, ...filtered]);
+  // products.json is committed together with jobs.json via saveJob's trigger
 }
 
 export function listProducts(
