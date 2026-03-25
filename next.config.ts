@@ -1,7 +1,9 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
-  /* config options here */
-};
+  // puppeteer-core and @sparticuz/chromium must not be bundled — they use
+  // native binaries that are loaded at runtime on the server.
+  serverExternalPackages: ['puppeteer-core', '@sparticuz/chromium'],
+}
 
-export default nextConfig;
+export default nextConfig
